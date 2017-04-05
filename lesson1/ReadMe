@@ -1,0 +1,24 @@
+第一个Express程序
+cnpm install express --save
+
+创建app.js
+
+输入下面代码
+let express = require('express')
+
+let app = express()
+
+app.get('/', function(req, res) {
+  res.send('hello world')
+})
+
+app.listen(3000, function(){
+  console.log('app is listening at port 3000');
+})
+
+node app.js
+
+打开浏览器访问
+http://localhost:3000
+
+

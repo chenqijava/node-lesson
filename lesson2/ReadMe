@@ -1,0 +1,19 @@
+1.学习 req.query 的用法
+2.学习建立 package.json 来管理 Node.js 项目。
+
+
+使用npm 管理nodejs项目
+
+npm init
+
+npm i express --save  #保存到package.json中
+
+  "dependencies": {
+    "express": "^4.15.2",
+    "utility": "^1.11.0"
+  }
+
+获取get请求的参数
+    req.query.<参数名>
+获取post请求的参数(express不会对body的数据进行处理，除非引入body-parser 这个中间件才会处理)
+    req.body
