@@ -1,0 +1,14 @@
+1.学习使用 superagent 抓取网页
+2.学习使用 cheerio 分析网页
+
+使用的依赖 express superagent cheerio
+
+1.创建项目
+  npm init
+2.安装依赖
+  npm i express superagent cheerio --save
+3.编写逻辑
+
+
+
+
