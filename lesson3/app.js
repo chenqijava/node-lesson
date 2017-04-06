@@ -21,7 +21,7 @@ app.get('/', function (req, res, next) {
         href: $element.attr('href')
       })
     })
-    // res.header('Content-Type', 'applications/json; charset=utf-8')
+    // res.header('Content-Type', 'application/json; charset=utf-8')
     res.send(items)
   })
 })
