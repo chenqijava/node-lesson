@@ -1,5 +1,5 @@
-1.学习使用 superagent 抓取网页
-2.学习使用 cheerio 分析网页
+1.学习使用 superagent 抓取网页 https://github.com/visionmedia/superagent
+2.学习使用 cheerio 分析网页  https://github.com/cheeriojs/cheerio
 
 使用的依赖 express superagent cheerio
 
@@ -10,5 +10,7 @@
 3.编写逻辑
 
 
+遇到的主要问题：
+  cheerio操作dom元素不熟练
 
 

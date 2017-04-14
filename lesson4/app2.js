@@ -2,57 +2,57 @@ var eventproxy = require('eventproxy')
 var superagent = require('superagent')
 var cheerio = require('cheerio')
 var url = require('url')
-var cnodeUrl = 'https://cnodejs.org'
 
-var topicUrls = []
+var cnodeUrl = 'https://cnodejs.org/'
+var topics = []
 
-var ep = new eventproxy()
-//var ep2 = new eventproxy()
-
-// topicUrl
-superagent.get(cnodeUrl).end(function (err, res){
+superagent.get(cnodeUrl).end((err, res) => {
   if (err) {
-    return console.error(err)
+    console.log(err)
+    return
   }
+  var taskUrls = []
+  var times = 0
   var $ = cheerio.load(res.text)
-  $('#topic_list .topic_title').each(function (index, element, p3) {
-    $element = $(element)
-    var href = url.resolve(cnodeUrl, $element.attr('href'))
-    topicUrls.push(href)
+  $('#topic_list .topic_title').each((index, elem) => {
+    $elem = $(elem)
+    taskUrls.push(url.resolve(cnodeUrl, $elem.attr('href')))
   })
-  console.log(topicUrls)
-  ep.emit('topic_finish')
+  console.log(taskUrls)
+  var ep = eventproxy()
+  
+  ep.after('topic_html', taskUrls.length, (data) => {
+    data.map(item => {
+      var $ = cheerio.load(item[1])
+      var href = item[0]
+      var title = $('#content .topic_full_title').text().trim()
+      var comment = $('.reply_content .markdown-text p').first().text().trim()
+      var author = $('.author_content .user_info .reply_author').first().text().trim()
+      var userPageUrl = $('.author_content .user_info .reply_author').first().attr('href') || '/404'
+      // console.log(userPageUrl)
+      superagent.get(url.resolve(cnodeUrl, userPageUrl)).end((err, res) => {
+        ep.emit('score', [{title, href, comment, author}, res.text])
+      })
+    })
+  })
+  
+  taskUrls.map((url) => {
+    superagent.get(url).end((err, res) => {
+      ep.emit('topic_html', [url, res.text])
+    })
+  })
+  
+  ep.after('score', taskUrls.length, (data) => {
+    topics = data.map(item => {
+      var topic = Object.assign({}, item[0])
+      var $ = cheerio.load(item[1])
+      topic.score = $('.user_profile .unstyled .big').text().trim()
+      return topic
+    })
+    console.log(topics)
+  })
 })
 
-ep.on('topic_finish', function () {
-  topicUrls.forEach(function (topicUrl) {
-    superagent.get(topicUrl)
-      .end(function (err, res) {
-        console.log('fetch ' + topicUrl + ' successful');
-        ep.emit('topic_html', [topicUrl, res.text]);
-      });
-  });
-  // 命令 ep 重复监听 topicUrls.length 次（在这里也就是 40 次） `topic_html` 事件再行动
-  ep.after('topic_html', topicUrls.length, function (topics) {
-    // topics 是个数组，包含了 40 次 ep.emit('topic_html', pair) 中的那 40 个 pair
-    
-    // 开始行动
-    topics = topics.map(function (topicPair) {
-      // 接下来都是 jquery 的用法了
-      var topicUrl = topicPair[0];
-      var topicHtml = topicPair[1];
-      var $ = cheerio.load(topicHtml);
-      return ({
-        title: $('.topic_full_title').text().trim(),
-        href: topicUrl,
-        comment1: $('.reply_content').eq(0).text().trim(),
-      });
-    });
-    
-    console.log('final:');
-    console.log(topics);
-  });
-})
 
 
 
