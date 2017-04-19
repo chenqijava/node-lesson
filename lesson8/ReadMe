@@ -1,0 +1,146 @@
+学习 supertest 的使用 (https://github.com/tj/supertest )
+复习 mocha，should 的使用
+
+
+var express = require('express');
+
+// 与之前一样
+var fibonacci = function (n) {
+  // typeof NaN === 'number' 是成立的，所以要判断 NaN
+  if (typeof n !== 'number' || isNaN(n)) {
+    throw new Error('n should be a Number');
+  }
+  if (n < 0) {
+    throw new Error('n should >= 0')
+  }
+  if (n > 10) {
+    throw new Error('n should <= 10');
+  }
+  if (n === 0) {
+    return 0;
+  }
+  if (n === 1) {
+    return 1;
+  }
+
+  return fibonacci(n-1) + fibonacci(n-2);
+};
+// END 与之前一样
+
+var app = express();
+
+app.get('/fib', function (req, res) {
+  // http 传来的东西默认都是没有类型的，都是 String，所以我们要手动转换类型
+  var n = Number(req.query.n);
+  try {
+    // 为何使用 String 做类型转换，是因为如果你直接给个数字给 res.send 的话，
+    // 它会当成是你给了它一个 http 状态码，所以我们明确给 String
+    res.send(String(fibonacci(n)));
+  } catch (e) {
+    // 如果 fibonacci 抛错的话，错误信息会记录在 err 对象的 .message 属性中。
+    // 拓展阅读：https://www.joyent.com/developers/node/design/errors
+    res
+      .status(500)
+      .send(e.message);
+  }
+});
+
+// 暴露 app 出去。module.exports 与 exports 的区别请看《深入浅出 Node.js》
+module.exports = app;
+
+app.listen(3000, function () {
+  console.log('app is listening at port 3000');
+});
+
+
+// 测试
+
+var app = require('../app');
+var supertest = require('supertest');
+// 看下面这句，这是关键一句。得到的 request 对象可以直接按照
+// superagent 的 API 进行调用
+var request = supertest(app);
+
+var should = require('should');
+
+describe('test/app.test.js', function () {
+  // 我们的第一个测试用例，好好理解一下
+  it('should return 55 when n is 10', function (done) {
+    // 之所以这个测试的 function 要接受一个 done 函数，是因为我们的测试内容
+    // 涉及了异步调用，而 mocha 是无法感知异步调用完成的。所以我们主动接受它提供
+    // 的 done 函数，在测试完毕时，自行调用一下，以示结束。
+    // mocha 可以感知到我们的测试函数是否接受 done 参数。js 中，function
+    // 对象是有长度的，它的长度由它的参数数量决定
+    // (function (a, b, c, d) {}).length === 4
+    // 所以 mocha 通过我们测试函数的长度就可以确定我们是否是异步测试。
+
+    request.get('/fib')
+    // .query 方法用来传 querystring，.send 方法用来传 body。
+    // 它们都可以传 Object 对象进去。
+    // 在这里，我们等于访问的是 /fib?n=10
+      .query({n: 10})
+      .end(function (err, res) {
+        // 由于 http 返回的是 String，所以我要传入 '55'。
+        res.text.should.equal('55');
+
+        // done(err) 这种用法写起来很鸡肋，是因为偷懒不想测 err 的值
+        // 如果勤快点，这里应该写成
+        /*
+        should.not.exist(err);
+        res.text.should.equal('55');
+        */
+        done(err);
+      });
+  });
+
+  // 下面我们对于各种边界条件都进行测试，由于它们的代码雷同，
+  // 所以我抽象出来了一个 testFib 方法。
+  var testFib = function (n, statusCode, expect, done) {
+    request.get('/fib')
+      .query({n: n})
+      .expect(statusCode)
+      .end(function (err, res) {
+        res.text.should.equal(expect);
+        done(err);
+      });
+  };
+  it('should return 0 when n === 0', function (done) {
+    testFib(0, 200, '0', done);
+  });
+
+  it('should equal 1 when n === 1', function (done) {
+    testFib(1, 200, '1', done);
+  });
+
+  it('should equal 55 when n === 10', function (done) {
+    testFib(10, 200, '55', done);
+  });
+
+  it('should throw when n > 10', function (done) {
+    testFib(11, 500, 'n should <= 10', done);
+  });
+
+  it('should throw when n < 0', function (done) {
+    testFib(-1, 500, 'n should >= 0', done);
+  });
+
+  it('should throw when n isnt Number', function (done) {
+    testFib('good', 500, 'n should be a Number', done);
+  });
+
+  // 单独测试一下返回码 500
+  it('should status 500 when error', function (done) {
+    request.get('/fib')
+      .query({n: 100})
+      .expect(500)
+      .end(function (err, res) {
+        done(err);
+      });
+  });
+});
+
+
+
+
+
+
